@@ -1,3 +1,5 @@
+<img src="brand/logo.png" alt="Bugne" width="233">
+
 # Bugne for Home Assistant
 
 A Home Assistant custom integration for [Bugne](https://github.com/Tupile/bugne-releases),
