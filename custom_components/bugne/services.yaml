@@ -1,0 +1,18 @@
+set_sleep_timer:
+  name: Set sleep timer
+  description: Set or clear the Bugne sleep timer.
+  target:
+    entity:
+      domain: media_player
+      integration: bugne
+  fields:
+    value:
+      name: Minutes
+      description: Minutes until playback stops. Use 0 to stop the timer, -1 to disable it.
+      required: true
+      example: 30
+      selector:
+        number:
+          min: -1
+          max: 240
+          mode: box

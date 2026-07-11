@@ -1,0 +1,13 @@
+{
+  "domain": "bugne",
+  "name": "Bugne",
+  "codeowners": ["@Tupile"],
+  "config_flow": true,
+  "documentation": "https://github.com/Tupile/bugne-hass",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/Tupile/bugne-hass/issues",
+  "requirements": ["Pillow>=10.0.0"],
+  "version": "1.0.0",
+  "zeroconf": ["_bugne._tcp.local."]
+}

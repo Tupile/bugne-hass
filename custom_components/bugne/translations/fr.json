@@ -1,0 +1,134 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Se connecter à Bugne",
+        "description": "Entrez l'adresse IP ou le nom d'hôte de votre appareil Bugne.",
+        "data": {
+          "host": "Hôte",
+          "password": "Mot de passe (laisser vide si aucun n'est défini)"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Bugne découvert",
+        "description": "Un appareil Bugne ({name}) a été trouvé sur votre réseau. Entrez son mot de passe s'il en a un.",
+        "data": {
+          "password": "Mot de passe (laisser vide si aucun n'est défini)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ré-authentifier Bugne",
+        "description": "Le mot de passe de cet appareil Bugne n'est plus valide. Entrez le nouveau mot de passe.",
+        "data": {
+          "password": "Mot de passe"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossible de se connecter à l'appareil. Vérifiez l'hôte et réessayez.",
+      "invalid_auth": "Mot de passe incorrect.",
+      "unknown": "Erreur inattendue."
+    },
+    "abort": {
+      "already_configured": "Cet appareil est déjà configuré.",
+      "no_device_id": "L'appareil découvert n'a pas annoncé d'identifiant.",
+      "reauth_successful": "La ré-authentification a réussi."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options Bugne",
+        "data": {
+          "scan_interval": "Intervalle d'interrogation (secondes)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "media_player": {
+      "player": {
+        "name": "Lecteur"
+      }
+    },
+    "sensor": {
+      "rssi": {
+        "name": "Force du signal"
+      },
+      "uptime": {
+        "name": "Dernier démarrage"
+      },
+      "heap_free": {
+        "name": "Mémoire libre"
+      },
+      "sd_free": {
+        "name": "Espace libre carte SD"
+      }
+    },
+    "binary_sensor": {
+      "sd_present": {
+        "name": "Carte SD"
+      }
+    },
+    "switch": {
+      "game": {
+        "name": "Jeu des tables de multiplication"
+      },
+      "quiet": {
+        "name": "Heures calmes {index}"
+      }
+    },
+    "number": {
+      "volume_max": {
+        "name": "Limite de volume"
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Redémarrer"
+      },
+      "check_update": {
+        "name": "Vérifier la mise à jour du firmware"
+      },
+      "refresh_podcasts": {
+        "name": "Actualiser les podcasts"
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
+    },
+    "camera": {
+      "screen": {
+        "name": "Écran"
+      }
+    }
+  },
+  "services": {
+    "set_sleep_timer": {
+      "name": "Définir la minuterie de veille",
+      "description": "Définit ou annule la minuterie de veille de Bugne.",
+      "fields": {
+        "value": {
+          "name": "Minutes",
+          "description": "Minutes avant l'arrêt de la lecture. Utilisez 0 pour arrêter la minuterie, -1 pour la désactiver."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "device_refused": {
+      "message": "Bugne a refusé la demande : {message}"
+    },
+    "config_write_failed": {
+      "message": "Impossible de mettre à jour la configuration de Bugne : {message}"
+    },
+    "entity_gone": {
+      "message": "{item} n'existe plus sur l'appareil."
+    },
+    "unknown_source": {
+      "message": "Source inconnue : {source}"
+    }
+  }
+}

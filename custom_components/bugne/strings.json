@@ -1,0 +1,134 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Bugne",
+        "description": "Enter the IP address or hostname of your Bugne device.",
+        "data": {
+          "host": "Host",
+          "password": "Password (leave empty if none is set)"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Bugne discovered",
+        "description": "A Bugne device ({name}) was found on your network. Enter its password if it has one.",
+        "data": {
+          "password": "Password (leave empty if none is set)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Bugne",
+        "description": "The password for this Bugne device is no longer valid. Enter the new password.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the device. Check the host and try again.",
+      "invalid_auth": "Wrong password.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "Device is already configured.",
+      "no_device_id": "The discovered device did not advertise an id.",
+      "reauth_successful": "Reauthentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Bugne options",
+        "data": {
+          "scan_interval": "Polling interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "media_player": {
+      "player": {
+        "name": "Player"
+      }
+    },
+    "sensor": {
+      "rssi": {
+        "name": "Signal strength"
+      },
+      "uptime": {
+        "name": "Last boot"
+      },
+      "heap_free": {
+        "name": "Free memory"
+      },
+      "sd_free": {
+        "name": "SD card free space"
+      }
+    },
+    "binary_sensor": {
+      "sd_present": {
+        "name": "SD card"
+      }
+    },
+    "switch": {
+      "game": {
+        "name": "Times-tables game"
+      },
+      "quiet": {
+        "name": "Quiet hours {index}"
+      }
+    },
+    "number": {
+      "volume_max": {
+        "name": "Volume limit"
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Reboot"
+      },
+      "check_update": {
+        "name": "Check for firmware update"
+      },
+      "refresh_podcasts": {
+        "name": "Refresh podcasts"
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
+    },
+    "camera": {
+      "screen": {
+        "name": "Screen"
+      }
+    }
+  },
+  "services": {
+    "set_sleep_timer": {
+      "name": "Set sleep timer",
+      "description": "Set or clear the Bugne sleep timer.",
+      "fields": {
+        "value": {
+          "name": "Minutes",
+          "description": "Minutes until playback stops. Use 0 to stop the timer, -1 to disable it."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "device_refused": {
+      "message": "Bugne refused the request: {message}"
+    },
+    "config_write_failed": {
+      "message": "Could not update the Bugne configuration: {message}"
+    },
+    "entity_gone": {
+      "message": "{item} no longer exists on the device."
+    },
+    "unknown_source": {
+      "message": "Unknown source: {source}"
+    }
+  }
+}

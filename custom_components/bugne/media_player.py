@@ -1,0 +1,228 @@
+"""Media player platform for Bugne."""
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timezone
+from typing import Any
+
+import voluptuous as vol
+from homeassistant.components.media_player import (
+    MediaPlayerEntity,
+    MediaPlayerEntityFeature,
+    MediaPlayerState,
+)
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_platform
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+from . import BugneConfigEntry
+from .api import BugneRefusedError
+from .const import ATTR_SLEEP_MIN, ATTR_VALUE, DOMAIN, SERVICE_SET_SLEEP_TIMER
+from .entity import BugneEntity
+
+_LOGGER = logging.getLogger(__name__)
+
+SOURCE_RADIO = "radio"
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: BugneConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the Bugne media player."""
+    data = entry.runtime_data
+    async_add_entities([BugneMediaPlayer(data.state_coordinator, data.config_coordinator)])
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_SET_SLEEP_TIMER,
+        {vol.Required(ATTR_VALUE): vol.All(vol.Coerce(int), vol.Range(min=-1))},
+        "async_set_sleep_timer",
+    )
+
+
+class BugneMediaPlayer(BugneEntity, MediaPlayerEntity):
+    """Represents the Bugne player.
+
+    The device has no "off" state (it is always on, just idle), so the
+    state never becomes MediaPlayerState.OFF.
+    """
+
+    _attr_translation_key = "player"
+    _attr_supported_features = (
+        MediaPlayerEntityFeature.PLAY
+        | MediaPlayerEntityFeature.PAUSE
+        | MediaPlayerEntityFeature.STOP
+        | MediaPlayerEntityFeature.NEXT_TRACK
+        | MediaPlayerEntityFeature.PREVIOUS_TRACK
+        | MediaPlayerEntityFeature.VOLUME_SET
+        | MediaPlayerEntityFeature.SELECT_SOURCE
+        | MediaPlayerEntityFeature.PLAY_MEDIA
+    )
+
+    def __init__(self, state_coordinator, config_coordinator) -> None:
+        super().__init__(state_coordinator, "player")
+        self._config_coordinator = config_coordinator
+        self._remove_config_listener = None
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self._remove_config_listener = self._config_coordinator.async_add_listener(
+            self._handle_config_update
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        if self._remove_config_listener is not None:
+            self._remove_config_listener()
+        await super().async_will_remove_from_hass()
+
+    def _handle_config_update(self) -> None:
+        self.async_write_ha_state()
+
+    def _handle_coordinator_update(self) -> None:
+        if self.coordinator.data:
+            self._attr_media_position_updated_at = datetime.now(timezone.utc)
+        super()._handle_coordinator_update()
+
+    @property
+    def _playback(self) -> dict[str, Any]:
+        return (self.coordinator.data or {}).get("playback", {})
+
+    @property
+    def _config(self) -> dict[str, Any]:
+        return (self._config_coordinator.data or {}).get("config", {})
+
+    @property
+    def _webradios(self) -> list[dict[str, Any]]:
+        return self._config.get("webradios", [])
+
+    @property
+    def state(self) -> MediaPlayerState:
+        # `available` (below) covers the unavailable case; this device has
+        # no "off" state, it is either idle, paused or playing.
+        playback = self._playback
+        if not playback.get("active"):
+            return MediaPlayerState.IDLE
+        if playback.get("paused"):
+            return MediaPlayerState.PAUSED
+        return MediaPlayerState.PLAYING
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
+    def volume_level(self) -> float | None:
+        volume = self._playback.get("volume")
+        if volume is None:
+            return None
+        return volume / 100
+
+    @property
+    def source_list(self) -> list[str]:
+        return [radio["name"] for radio in self._webradios]
+
+    @property
+    def source(self) -> str | None:
+        if self._playback.get("source") != SOURCE_RADIO:
+            return None
+        title = self._playback.get("title", "")
+        for radio in self._webradios:
+            if radio.get("name") == title:
+                return radio["name"]
+        return None
+
+    @property
+    def media_title(self) -> str | None:
+        return self._playback.get("title") or None
+
+    @property
+    def media_artist(self) -> str | None:
+        return self._playback.get("artist") or None
+
+    @property
+    def app_name(self) -> str | None:
+        return self._playback.get("source")
+
+    @property
+    def media_duration(self) -> int | None:
+        dur_ms = self._playback.get("dur_ms") or 0
+        return dur_ms // 1000 or None
+
+    @property
+    def media_position(self) -> int | None:
+        return self._playback.get("pos_ms", 0) // 1000
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {ATTR_SLEEP_MIN: self._playback.get("sleep_min")}
+
+    async def _optimistic_refresh(self) -> None:
+        self.async_write_ha_state()
+        await self.coordinator.async_request_refresh()
+
+    async def _send(self, action: str, value: Any = None, title: str | None = None) -> None:
+        try:
+            await self.coordinator.client.playback_action(action, value=value, title=title)
+        except BugneRefusedError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="device_refused",
+                translation_placeholders={"message": err.message},
+            ) from err
+
+    async def async_media_play(self) -> None:
+        playback = self._playback
+        if playback.get("active") and playback.get("paused"):
+            await self._send("toggle")
+            await self._optimistic_refresh()
+
+    async def async_media_pause(self) -> None:
+        playback = self._playback
+        if playback.get("active") and not playback.get("paused"):
+            await self._send("toggle")
+            await self._optimistic_refresh()
+
+    async def async_media_play_pause(self) -> None:
+        await self._send("toggle")
+        await self._optimistic_refresh()
+
+    async def async_media_stop(self) -> None:
+        await self._send("stop")
+        await self._optimistic_refresh()
+
+    async def async_media_next_track(self) -> None:
+        await self._send("next")
+        await self._optimistic_refresh()
+
+    async def async_media_previous_track(self) -> None:
+        await self._send("prev")
+        await self._optimistic_refresh()
+
+    async def async_set_volume_level(self, volume: float) -> None:
+        await self._send("volume", value=round(volume * 100))
+        await self._optimistic_refresh()
+
+    async def async_select_source(self, source: str) -> None:
+        for radio in self._webradios:
+            if radio.get("name") == source:
+                await self._send("radio", value=radio["id"])
+                await self._optimistic_refresh()
+                return
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="unknown_source",
+            translation_placeholders={"source": source},
+        )
+
+    async def async_play_media(self, media_type: str, media_id: str, **kwargs: Any) -> None:
+        title = kwargs.get("metadata", {}).get("title") if kwargs.get("metadata") else None
+        await self._send("path", value=media_id, title=title)
+        await self._optimistic_refresh()
+
+    async def async_set_sleep_timer(self, value: int) -> None:
+        """Entity service: set or clear the sleep timer (minutes, -1 or 0)."""
+        await self._send("sleep", value=value)
+        await self._optimistic_refresh()
