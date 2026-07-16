@@ -51,7 +51,7 @@ class BugneMediaPlayer(BugneEntity, MediaPlayerEntity):
     """
 
     _attr_translation_key = "player"
-    _attr_supported_features = (
+    _BASE_FEATURES = (
         MediaPlayerEntityFeature.PLAY
         | MediaPlayerEntityFeature.PAUSE
         | MediaPlayerEntityFeature.STOP
@@ -61,6 +61,15 @@ class BugneMediaPlayer(BugneEntity, MediaPlayerEntity):
         | MediaPlayerEntityFeature.SELECT_SOURCE
         | MediaPlayerEntityFeature.PLAY_MEDIA
     )
+
+    @property
+    def supported_features(self) -> MediaPlayerEntityFeature:
+        # SEEK follows the device's "seekable" flag (firmware >= 1.5.0, true
+        # while a local FLAC/MP3/M4A file plays; absent on older firmware).
+        features = self._BASE_FEATURES
+        if self._playback.get("seekable"):
+            features |= MediaPlayerEntityFeature.SEEK
+        return features
 
     def __init__(self, state_coordinator, config_coordinator) -> None:
         super().__init__(state_coordinator, "player")
@@ -203,6 +212,10 @@ class BugneMediaPlayer(BugneEntity, MediaPlayerEntity):
 
     async def async_set_volume_level(self, volume: float) -> None:
         await self._send("volume", value=round(volume * 100))
+        await self._optimistic_refresh()
+
+    async def async_media_seek(self, position: float) -> None:
+        await self._send("seek", value=round(position * 1000))
         await self._optimistic_refresh()
 
     async def async_select_source(self, source: str) -> None:

@@ -12,7 +12,7 @@ on your network via zeroconf.
 
 | Entity | Type | Description |
 |---|---|---|
-| Player | `media_player` | Play/pause/stop, next/previous, volume, source (web radios), play a specific SD track, sleep timer (`set_sleep_timer` service) |
+| Player | `media_player` | Play/pause/stop, next/previous, volume, seek (local files, firmware 1.5.0+), source (web radios), play a specific SD track, sleep timer (`set_sleep_timer` service) |
 | Signal strength | `sensor` (diagnostic) | Wi-Fi RSSI |
 | Last boot | `sensor` (diagnostic) | Device uptime, as a timestamp |
 | Free memory | `sensor` (diagnostic, disabled by default) | Free heap |
