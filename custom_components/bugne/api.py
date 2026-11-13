@@ -133,6 +133,14 @@ class BugneApiClient:
         # Command endpoints reply with plain text ("ok"), not JSON.
         await self._request("POST", "/api/playback", json=payload, expect_json=False)
 
+    async def post_agenda(self, payload: dict[str, Any]) -> None:
+        """Push the agenda + weather data shown on the device screen.
+
+        Needs a firmware whose /api/status has an "agenda" field: an older
+        one answers this route with its captive-portal redirect.
+        """
+        await self._request("POST", "/api/agenda", json=payload, expect_json=False)
+
     # -- config --------------------------------------------------------------
 
     async def get_config(self) -> dict[str, Any]:

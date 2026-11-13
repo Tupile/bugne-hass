@@ -57,6 +57,24 @@ the device has no password.
 The polling interval (default 5 seconds) can be changed from the integration's
 **Configure** options.
 
+### Agenda screen (calendar and weather)
+
+The device can show the next three events of a calendar and the weather on
+its own screen. In the integration's **Configure** options, pick a calendar
+entity, a weather entity, or both. Home Assistant then sends the text to the
+device whenever it changes; nothing is configured on the device itself.
+
+- On the device, the home screen clock shows the current weather and the
+  temperature. Tap it to open the agenda screen.
+- The screen shows the current weather as a pictogram, the temperature,
+  today's minimum and maximum (daily forecast), a droplet when the hourly
+  forecast announces rain within the hour, and the next three events of the
+  coming seven days.
+- Dates are written in the language of Home Assistant (English, French or
+  German; English otherwise).
+- Needs device firmware 1.27.0 or newer. The device keeps the data in memory
+  only and hides it after two hours without news from Home Assistant.
+
 ## Note (FR)
 
 Cette intégration pilote un [Bugne](https://github.com/Tupile/bugne-releases), un

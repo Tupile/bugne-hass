@@ -26,6 +26,8 @@ CONFIG_SCAN_INTERVAL = 60
 CONF_HOST = "host"
 CONF_PASSWORD = "password"
 CONF_SCAN_INTERVAL = "scan_interval"
+CONF_CALENDAR_ENTITY = "calendar_entity"
+CONF_WEATHER_ENTITY = "weather_entity"
 
 ATTR_SLEEP_MIN = "sleep_min"
 SERVICE_SET_SLEEP_TIMER = "set_sleep_timer"

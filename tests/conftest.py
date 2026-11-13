@@ -24,6 +24,14 @@ assert _spec.loader is not None
 _spec.loader.exec_module(bugne_api)
 sys.modules["bugne_api"] = bugne_api
 
+# agenda.py is loaded the same way: it has no Home Assistant import either.
+_AGENDA_PATH = _API_PATH.with_name("agenda.py")
+_aspec = importlib.util.spec_from_file_location("bugne_agenda", _AGENDA_PATH)
+bugne_agenda = importlib.util.module_from_spec(_aspec)
+assert _aspec.loader is not None
+_aspec.loader.exec_module(bugne_agenda)
+sys.modules["bugne_agenda"] = bugne_agenda
+
 
 @pytest.fixture
 def host() -> str:

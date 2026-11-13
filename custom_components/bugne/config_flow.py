@@ -11,14 +11,17 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .api import BugneApiClient, BugneAuthError, BugneConnectionError, BugneError
 from .const import (
+    CONF_CALENDAR_ENTITY,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_WEATHER_ENTITY,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MAX_SCAN_INTERVAL,
@@ -191,7 +194,7 @@ class BugneConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class BugneOptionsFlow(OptionsFlow):
-    """Handle Bugne options (polling interval)."""
+    """Handle Bugne options: polling interval, agenda screen entities."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -207,6 +210,20 @@ class BugneOptionsFlow(OptionsFlow):
                         CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
                     ),
                 ): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)),
+                # Both optional: shown on the device's agenda screen (push.py).
+                # suggested_value, not default, so a field can be emptied.
+                vol.Optional(
+                    CONF_CALENDAR_ENTITY,
+                    description={
+                        "suggested_value": self.config_entry.options.get(CONF_CALENDAR_ENTITY)
+                    },
+                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="calendar")),
+                vol.Optional(
+                    CONF_WEATHER_ENTITY,
+                    description={
+                        "suggested_value": self.config_entry.options.get(CONF_WEATHER_ENTITY)
+                    },
+                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="weather")),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

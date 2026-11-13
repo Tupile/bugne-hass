@@ -40,8 +40,11 @@
       "init": {
         "title": "Options Bugne",
         "data": {
-          "scan_interval": "Intervalle d'interrogation (secondes)"
-        }
+          "scan_interval": "Intervalle d'interrogation (secondes)",
+          "calendar_entity": "Agenda pour l'écran agenda",
+          "weather_entity": "Météo pour l'écran agenda"
+        },
+        "description": "Optionnel. L'appareil affiche les trois prochains événements de l'agenda et la météo sur son écran agenda (toucher l'horloge de l'accueil). Demande le firmware 1.27.0 ou plus récent."
       }
     }
   },

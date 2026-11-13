@@ -40,8 +40,11 @@
       "init": {
         "title": "Bugne options",
         "data": {
-          "scan_interval": "Polling interval (seconds)"
-        }
+          "scan_interval": "Polling interval (seconds)",
+          "calendar_entity": "Calendar for the agenda screen",
+          "weather_entity": "Weather for the agenda screen"
+        },
+        "description": "Optional. The device shows the next three events of the calendar and the weather on its agenda screen (tap the clock on the home screen). Needs firmware 1.27.0 or newer."
       }
     }
   },

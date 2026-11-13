@@ -170,3 +170,13 @@ async def test_lock_serializes_concurrent_requests(make_client):
         await asyncio.gather(client.get_status(), client.get_status())
 
     assert max_in_flight == 1
+
+
+async def test_post_agenda_sends_payload_and_accepts_plain_text(make_client):
+    client = make_client()
+    payload = {"weather": {"cond": "sunny", "temp": "12 °C"}, "events": []}
+    with aioresponses() as mocked:
+        mocked.post("http://192.0.2.50/api/agenda", body="ok")
+        await client.post_agenda(payload)
+    request = mocked.requests[("POST", URL("http://192.0.2.50/api/agenda"))][0]
+    assert request.kwargs["json"] == payload

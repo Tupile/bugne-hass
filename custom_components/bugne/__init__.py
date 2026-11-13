@@ -11,8 +11,17 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import BugneApiClient, BugneAuthError, BugneConnectionError
-from .const import CONF_HOST, CONF_PASSWORD, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, PLATFORMS
+from .const import (
+    CONF_CALENDAR_ENTITY,
+    CONF_HOST,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    CONF_WEATHER_ENTITY,
+    DEFAULT_SCAN_INTERVAL,
+    PLATFORMS,
+)
 from .coordinator import BugneConfigCoordinator, BugneDeviceIdentity, BugneStateCoordinator
+from .push import AgendaPusher
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,12 +76,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: BugneConfigEntry) -> boo
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Agenda screen: only when the user picked a calendar or a weather entity.
+    calendar_entity = entry.options.get(CONF_CALENDAR_ENTITY)
+    weather_entity = entry.options.get(CONF_WEATHER_ENTITY)
+    if calendar_entity or weather_entity:
+        pusher = AgendaPusher(hass, client, state_coordinator, calendar_entity, weather_entity)
+        pusher.async_start()
+        entry.async_on_unload(pusher.async_stop)
+
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: BugneConfigEntry) -> None:
-    """Reload the entry when its options change (e.g. scan_interval)."""
+    """Reload the entry when its options change (scan interval, agenda entities)."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
