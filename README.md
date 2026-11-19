@@ -13,6 +13,7 @@ on your network via zeroconf.
 | Entity | Type | Description |
 |---|---|---|
 | Player | `media_player` | Play/pause/stop, next/previous, volume, seek (local files, firmware 1.5.0+), source (web radios), play a specific SD track, sleep timer (`set_sleep_timer` service) |
+| Notifications | services | Show a text on the device screen with up to two answer buttons (`send_notification`, `clear_notification`), see below |
 | Signal strength | `sensor` (diagnostic) | Wi-Fi RSSI |
 | Last boot | `sensor` (diagnostic) | Device uptime, as a timestamp |
 | Free memory | `sensor` (diagnostic, disabled by default) | Free heap |
@@ -74,6 +75,60 @@ device whenever it changes; nothing is configured on the device itself.
   German; English otherwise).
 - Needs device firmware 1.27.0 or newer. The device keeps the data in memory
   only and hides it after two hours without news from Home Assistant.
+
+### Notifications with answers
+
+Home Assistant can show a text on the device, with up to two answer buttons.
+A bell appears at the top of the device's home screen and a short message
+announces it; a tap on the bell opens the notification. There is no sound and
+a sleeping screen stays off. The device holds one notification at a time: a
+new one replaces the previous one, and a reboot loses it.
+
+Send one with the `bugne.send_notification` action on the player entity:
+
+```yaml
+action: bugne.send_notification
+target:
+  entity_id: media_player.bugne
+data:
+  title: Home
+  message: Turn off the living room?
+  id: living-room-off
+  actions:
+    - id: "yes"
+      label: "Yes"
+    - id: "no"
+      label: "No"
+```
+
+The answer fires the `bugne_notification_action` event, with `id`, `action`,
+`device_id` and `entry_id`:
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: bugne_notification_action
+    event_data:
+      id: living-room-off
+      action: "yes"
+actions:
+  - action: light.turn_off
+    target:
+      entity_id: light.living_room
+```
+
+- Without `actions` the device shows a single OK button and no event is fired.
+- `bugne.clear_notification` removes the notification from the device.
+- Quote `"yes"` and `"no"` in YAML: bare, they are booleans.
+- The device posts the answer to a Home Assistant webhook, so it must reach
+  Home Assistant's local URL (Settings, System, Network). A `.local` name
+  works over `http://` only; with `https://` use a name the device can
+  resolve through DNS and a certificate from a public authority.
+- If Home Assistant cannot be reached, the device says so and keeps the
+  notification, so the answer can be tried again.
+- An answer can reach Home Assistant twice when the network is slow: prefer
+  `turn_on` / `turn_off` to `toggle` in the automation.
+- Needs device firmware 1.29.0 or newer.
 
 ## Note (FR)
 

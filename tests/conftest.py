@@ -32,6 +32,14 @@ assert _aspec.loader is not None
 _aspec.loader.exec_module(bugne_agenda)
 sys.modules["bugne_agenda"] = bugne_agenda
 
+# notify.py too.
+_NOTIFY_PATH = _API_PATH.with_name("notify.py")
+_nspec = importlib.util.spec_from_file_location("bugne_notify", _NOTIFY_PATH)
+bugne_notify = importlib.util.module_from_spec(_nspec)
+assert _nspec.loader is not None
+_nspec.loader.exec_module(bugne_notify)
+sys.modules["bugne_notify"] = bugne_notify
+
 
 @pytest.fixture
 def host() -> str:

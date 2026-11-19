@@ -32,3 +32,15 @@ CONF_WEATHER_ENTITY = "weather_entity"
 ATTR_SLEEP_MIN = "sleep_min"
 SERVICE_SET_SLEEP_TIMER = "set_sleep_timer"
 ATTR_VALUE = "value"
+
+# Notifications: the device posts the chosen answer to a webhook, and the
+# integration fires this event with it.
+CONF_WEBHOOK_ID = "webhook_id"
+EVENT_NOTIFICATION_ACTION = "bugne_notification_action"
+SERVICE_SEND_NOTIFICATION = "send_notification"
+SERVICE_CLEAR_NOTIFICATION = "clear_notification"
+ATTR_MESSAGE = "message"
+ATTR_TITLE = "title"
+ATTR_ID = "id"
+ATTR_ACTIONS = "actions"
+ATTR_LABEL = "label"

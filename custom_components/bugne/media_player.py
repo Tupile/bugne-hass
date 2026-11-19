@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import voluptuous as vol
+from homeassistant.components import webhook
 from homeassistant.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -13,12 +14,28 @@ from homeassistant.components.media_player import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import BugneConfigEntry
 from .api import BugneRefusedError
-from .const import ATTR_SLEEP_MIN, ATTR_VALUE, DOMAIN, SERVICE_SET_SLEEP_TIMER
+from .const import (
+    ATTR_ACTIONS,
+    ATTR_ID,
+    ATTR_LABEL,
+    ATTR_MESSAGE,
+    ATTR_SLEEP_MIN,
+    ATTR_TITLE,
+    ATTR_VALUE,
+    CONF_WEBHOOK_ID,
+    DOMAIN,
+    SERVICE_CLEAR_NOTIFICATION,
+    SERVICE_SEND_NOTIFICATION,
+    SERVICE_SET_SLEEP_TIMER,
+)
+from .notify import MAX_ACTIONS, build_payload
 from .entity import BugneEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,6 +57,23 @@ async def async_setup_entry(
         SERVICE_SET_SLEEP_TIMER,
         {vol.Required(ATTR_VALUE): vol.All(vol.Coerce(int), vol.Range(min=-1))},
         "async_set_sleep_timer",
+    )
+    platform.async_register_entity_service(
+        SERVICE_SEND_NOTIFICATION,
+        {
+            vol.Required(ATTR_MESSAGE): cv.string,
+            vol.Optional(ATTR_TITLE): cv.string,
+            vol.Optional(ATTR_ID): cv.string,
+            vol.Optional(ATTR_ACTIONS): vol.All(
+                cv.ensure_list,
+                vol.Length(max=MAX_ACTIONS),
+                [{vol.Required(ATTR_ID): cv.string, vol.Required(ATTR_LABEL): cv.string}],
+            ),
+        },
+        "async_send_notification",
+    )
+    platform.async_register_entity_service(
+        SERVICE_CLEAR_NOTIFICATION, None, "async_clear_notification"
     )
 
 
@@ -234,6 +268,57 @@ class BugneMediaPlayer(BugneEntity, MediaPlayerEntity):
         title = kwargs.get("metadata", {}).get("title") if kwargs.get("metadata") else None
         await self._send("path", value=media_id, title=title)
         await self._optimistic_refresh()
+
+    async def _post_notification(self, payload: dict[str, Any]) -> None:
+        status = (self.coordinator.data or {}).get("status") or {}
+        if "notify" not in status:
+            # An older firmware answers the unknown route with a redirect.
+            raise HomeAssistantError(
+                "This Bugne firmware has no notifications: update the device"
+            )
+        try:
+            await self.coordinator.client.post_notification(payload)
+        except BugneRefusedError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="device_refused",
+                translation_placeholders={"message": err.message},
+            ) from err
+
+    async def async_send_notification(
+        self,
+        message: str,
+        title: str | None = None,
+        id: str | None = None,  # noqa: A002 (the service field name)
+        actions: list[dict[str, str]] | None = None,
+    ) -> None:
+        """Entity service: show a notification, with up to two answers.
+
+        The device posts the chosen answer to this entry's webhook, which
+        fires the bugne_notification_action event.
+        """
+        reply_url = None
+        if actions:
+            # The webhook is local only: an external URL (reverse proxy) would
+            # be answered 200 and dropped, a silently dead button.
+            try:
+                base = get_url(self.hass, allow_external=False, allow_cloud=False)
+            except NoURLAvailableError as err:
+                raise HomeAssistantError(
+                    "Home Assistant has no URL the device can answer to: "
+                    "set the local network URL in Settings, System, Network"
+                ) from err
+            webhook_id = self.coordinator.entry.data[CONF_WEBHOOK_ID]
+            reply_url = f"{base}{webhook.async_generate_path(webhook_id)}"
+        try:
+            payload = build_payload(message, title, id, actions, reply_url)
+        except ValueError as err:
+            raise HomeAssistantError(f"Invalid notification: {err}") from err
+        await self._post_notification(payload)
+
+    async def async_clear_notification(self) -> None:
+        """Entity service: remove the notification shown on the device."""
+        await self._post_notification({})
 
     async def async_set_sleep_timer(self, value: int) -> None:
         """Entity service: set or clear the sleep timer (minutes, -1 or 0)."""

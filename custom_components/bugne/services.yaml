@@ -16,3 +16,53 @@ set_sleep_timer:
           min: -1
           max: 240
           mode: box
+
+send_notification:
+  name: Send notification
+  description: >-
+    Show a text on the Bugne screen, behind a bell on its home screen, with up
+    to two answer buttons. The chosen answer fires the
+    bugne_notification_action event. A new notification replaces the previous
+    one.
+  target:
+    entity:
+      domain: media_player
+      integration: bugne
+  fields:
+    message:
+      name: Message
+      description: Text of the notification (255 bytes at most, cut beyond).
+      required: true
+      example: Turn off the living room?
+      selector:
+        text:
+          multiline: true
+    title:
+      name: Title
+      description: Short title, also shown in the toast when it arrives.
+      example: Home
+      selector:
+        text:
+    id:
+      name: Identifier
+      description: Free identifier, sent back in the event with the answer.
+      example: living-room-off
+      selector:
+        text:
+    actions:
+      name: Answers
+      description: >-
+        Up to two answer buttons, each with an id (sent back in the event) and
+        a label (the button text). Without answers the device shows an OK
+        button and no event is fired.
+      example: '[{"id": "yes", "label": "Yes"}, {"id": "no", "label": "No"}]'
+      selector:
+        object:
+
+clear_notification:
+  name: Clear notification
+  description: Remove the notification shown on the Bugne.
+  target:
+    entity:
+      domain: media_player
+      integration: bugne

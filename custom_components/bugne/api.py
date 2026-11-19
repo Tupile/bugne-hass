@@ -141,6 +141,13 @@ class BugneApiClient:
         """
         await self._request("POST", "/api/agenda", json=payload, expect_json=False)
 
+    async def post_notification(self, payload: dict[str, Any]) -> None:
+        """Show a notification on the device; an empty payload clears it.
+
+        Needs a firmware whose /api/status has a "notify" field.
+        """
+        await self._request("POST", "/api/notify", json=payload, expect_json=False)
+
     # -- config --------------------------------------------------------------
 
     async def get_config(self) -> dict[str, Any]:

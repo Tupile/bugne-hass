@@ -180,3 +180,13 @@ async def test_post_agenda_sends_payload_and_accepts_plain_text(make_client):
         await client.post_agenda(payload)
     request = mocked.requests[("POST", URL("http://192.0.2.50/api/agenda"))][0]
     assert request.kwargs["json"] == payload
+
+
+async def test_post_notification_sends_payload_and_accepts_plain_text(make_client):
+    client = make_client()
+    payload = {"message": "Dinner is ready"}
+    with aioresponses() as mocked:
+        mocked.post("http://192.0.2.50/api/notify", body="ok")
+        await client.post_notification(payload)
+    request = mocked.requests[("POST", URL("http://192.0.2.50/api/notify"))][0]
+    assert request.kwargs["json"] == payload

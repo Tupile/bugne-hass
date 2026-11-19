@@ -5,9 +5,12 @@ import logging
 from dataclasses import dataclass
 
 import aiohttp
+from aiohttp import web
+from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import BugneApiClient, BugneAuthError, BugneConnectionError
@@ -17,10 +20,14 @@ from .const import (
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_WEATHER_ENTITY,
+    CONF_WEBHOOK_ID,
     DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    EVENT_NOTIFICATION_ACTION,
     PLATFORMS,
 )
 from .coordinator import BugneConfigCoordinator, BugneDeviceIdentity, BugneStateCoordinator
+from .notify import parse_reply
 from .push import AgendaPusher
 
 _LOGGER = logging.getLogger(__name__)
@@ -75,6 +82,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: BugneConfigEntry) -> boo
         dev_id=dev_id,
     )
 
+    _async_register_webhook(hass, entry, dev_id)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Agenda screen: only when the user picked a calendar or a weather entity.
@@ -87,6 +96,54 @@ async def async_setup_entry(hass: HomeAssistant, entry: BugneConfigEntry) -> boo
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
+
+
+def _async_register_webhook(hass: HomeAssistant, entry: BugneConfigEntry, dev_id: str) -> None:
+    """Register the webhook the device posts notification answers to.
+
+    One webhook per device. Its id is generated once and kept in the entry
+    data, so a notification sent before a restart can still be answered. This
+    runs before the update listener is added, so storing the id does not
+    reload the entry.
+    """
+    webhook_id = entry.data.get(CONF_WEBHOOK_ID)
+    if not webhook_id:
+        webhook_id = webhook.async_generate_id()
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_WEBHOOK_ID: webhook_id}
+        )
+
+    async def handle(
+        hass: HomeAssistant, webhook_id: str, request: web.Request
+    ) -> web.Response | None:
+        try:
+            reply = parse_reply(await request.json())
+        except ValueError:
+            reply = None
+        if reply is None:
+            return web.Response(status=400)
+        device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, dev_id)})
+        hass.bus.async_fire(
+            EVENT_NOTIFICATION_ACTION,
+            {
+                "device_id": device.id if device else None,
+                "entry_id": entry.entry_id,
+                "id": reply[0],
+                "action": reply[1],
+            },
+        )
+        return None
+
+    webhook.async_register(
+        hass,
+        DOMAIN,
+        f"Bugne {dev_id.upper()} notification answer",
+        webhook_id,
+        handle,
+        local_only=True,
+        allowed_methods=["POST"],
+    )
+    entry.async_on_unload(lambda: webhook.async_unregister(hass, webhook_id))
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: BugneConfigEntry) -> None:
